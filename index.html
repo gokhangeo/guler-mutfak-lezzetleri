@@ -247,6 +247,7 @@
 
     #floating-add-btn { display: none; position: fixed; bottom: 20px; right: 90px; width: 60px; height: 60px; background: #8e44ad; color: white; border-radius: 50%; font-size: 30px; border: none; z-index: 1000; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.3); font-weight: bold; }
     #floating-logout-btn { display: none; position: fixed; bottom: 90px; left: 20px; padding: 10px 20px; border-radius: 30px; background: #c0392b; color: white; border: none; z-index: 1000; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    #floating-print-btn { display: none; position: fixed; bottom: 140px; left: 20px; padding: 10px 20px; border-radius: 30px; background: #2980b9; color: white; border: none; z-index: 1000; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
 
     /* Sepet & Bildirim */
     #cart { background: #fff; padding: 2.5rem; margin: 4rem auto 2rem; max-width: 750px; border-radius: 25px; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.06); }
@@ -259,6 +260,15 @@
     .order-btn { background: #2ecc71; } .insta-btn { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
     
     #notification { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #2c3e50; color: white; padding: 16px 40px; border-radius: 40px; display: none; z-index: 4000; font-weight: bold; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.1); }
+
+    /* Yazdırma / PDF Çıktı Tasarımı */
+    #print-menu { display: none; padding: 20px; }
+    @media print {
+      body.printing-menu > *:not(#print-menu) { display: none !important; }
+      body.printing-menu { background: white !important; margin: 0; padding: 0; color: black; }
+      #print-menu { display: block !important; }
+      @page { margin: 1cm; }
+    }
 
     /* Mobil Düzeni */
     @media (max-width: 768px) {
@@ -303,6 +313,7 @@
 
       .floating-wa-btn { width: 50px; height: 50px; bottom: 15px; left: 15px; }
       .floating-wa-btn svg { width: 28px; height: 28px; }
+      #floating-print-btn { bottom: 130px; left: 15px; font-size: 0.8rem; padding: 8px 15px; }
     }
   </style>
 </head>
@@ -427,6 +438,7 @@
   </div>
 
   <button id="floating-add-btn" onclick="openAdminModal()">+</button>
+  <button id="floating-print-btn" onclick="printMenu()">Menü İndir / Yazdır</button>
   <button id="floating-logout-btn" onclick="logoutAdmin()">Admin Çıkış</button>
 
   <div id="loader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
@@ -536,6 +548,7 @@
       if (isAdmin) {
         document.getElementById('floating-add-btn').style.display = 'block';
         document.getElementById('floating-logout-btn').style.display = 'block';
+        document.getElementById('floating-print-btn').style.display = 'block'; // PDF/Yazdır Butonu
       }
       
       setTimeout(() => { 
@@ -938,6 +951,47 @@
     }
     
     async function editCampaignText() { if(!isAdmin) return; const t = prompt("Yeni Kampanya Yazısı:", campaignText); if(t) { campaignText = t; await saveToFirebase(); } }
+
+    /* --- Menü PDF / Yazdırma Fonksiyonu --- */
+    function printMenu() {
+      let printContainer = document.getElementById('print-menu');
+      if(!printContainer) {
+        printContainer = document.createElement('div');
+        printContainer.id = 'print-menu';
+        document.body.appendChild(printContainer);
+      }
+      
+      let html = '<h1 style="text-align:center; color:#ff7e5f; font-family:Nunito,sans-serif; margin-bottom: 20px; border-bottom: 2px solid #ff7e5f; padding-bottom: 10px;">GÜLER MUTFAK LEZZETLERİ - GÜNCEL MENÜ</h1>';
+      html += '<div style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center;">';
+      
+      productList.forEach(p => {
+        let imgUrl = Array.isArray(p.image) ? p.image[0] : p.image;
+        let priceText = p.discount 
+          ? `<span style="text-decoration:line-through; color:#999; font-size:12px; margin-right:5px;">${p.price}₺</span><b style="color:#27ae60; font-size:18px;">${p.discount}₺</b>` 
+          : `<b style="color:#27ae60; font-size:18px;">${p.price}₺</b>`;
+        
+        html += `
+          <div style="width:45%; border:1px solid #ddd; border-radius:10px; padding:15px; display:flex; align-items:center; gap:15px; page-break-inside: avoid; background:#fff;">
+            <img src="${imgUrl}" style="width:90px; height:90px; object-fit:cover; border-radius:8px; border:1px solid #eee;" onerror="this.src='${fallbackImg}'">
+            <div style="font-family:Poppins,sans-serif; flex:1;">
+              <h3 style="margin:0 0 5px 0; font-size:16px; color:#333;">${p.name}</h3>
+              <div style="margin:0 0 5px 0;">${priceText} <span style="font-size:12px; color:#888;">(${p.unit})</span></div>
+              <p style="margin:0; font-size:11px; color:#666; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${p.desc || ''}</p>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      
+      printContainer.innerHTML = html;
+      
+      document.body.classList.add('printing-menu');
+      window.print();
+      
+      window.onafterprint = () => {
+        document.body.classList.remove('printing-menu');
+      };
+    }
   </script>
 </body>
 </html>
