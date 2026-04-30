@@ -962,26 +962,42 @@
       }
       
       let html = '<h1 style="text-align:center; color:#ff7e5f; font-family:Nunito,sans-serif; margin-bottom: 20px; border-bottom: 2px solid #ff7e5f; padding-bottom: 10px;">GÜLER MUTFAK LEZZETLERİ - GÜNCEL MENÜ</h1>';
-      html += '<div style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center;">';
       
-      productList.forEach(p => {
-        let imgUrl = Array.isArray(p.image) ? p.image[0] : p.image;
-        let priceText = p.discount 
-          ? `<span style="text-decoration:line-through; color:#999; font-size:12px; margin-right:5px;">${p.price}₺</span><b style="color:#27ae60; font-size:18px;">${p.discount}₺</b>` 
-          : `<b style="color:#27ae60; font-size:18px;">${p.price}₺</b>`;
-        
-        html += `
-          <div style="width:45%; border:1px solid #ddd; border-radius:10px; padding:15px; display:flex; align-items:center; gap:15px; page-break-inside: avoid; background:#fff;">
-            <img src="${imgUrl}" style="width:90px; height:90px; object-fit:cover; border-radius:8px; border:1px solid #eee;" onerror="this.src='${fallbackImg}'">
-            <div style="font-family:Poppins,sans-serif; flex:1;">
-              <h3 style="margin:0 0 5px 0; font-size:16px; color:#333;">${p.name}</h3>
-              <div style="margin:0 0 5px 0;">${priceText} <span style="font-size:12px; color:#888;">(${p.unit})</span></div>
-              <p style="margin:0; font-size:11px; color:#666; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${p.desc || ''}</p>
-            </div>
-          </div>
-        `;
-      });
-      html += '</div>';
+      const favorites = productList.filter(p => p.isFavorite);
+      const others = productList.filter(p => !p.isFavorite);
+
+      const renderItems = (items) => {
+         let itemsHtml = '<div style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center; margin-bottom: 30px;">';
+         items.forEach(p => {
+            let imgUrl = Array.isArray(p.image) ? p.image[0] : p.image;
+            let priceText = p.discount 
+              ? `<span style="text-decoration:line-through; color:#999; font-size:12px; margin-right:5px;">${p.price}₺</span><b style="color:#27ae60; font-size:18px;">${p.discount}₺</b>` 
+              : `<b style="color:#27ae60; font-size:18px;">${p.price}₺</b>`;
+            
+            itemsHtml += `
+              <div style="width:45%; border:1px solid #ddd; border-radius:10px; padding:15px; display:flex; align-items:center; gap:15px; page-break-inside: avoid; background:#fff;">
+                <img src="${imgUrl}" style="width:90px; height:90px; object-fit:cover; border-radius:8px; border:1px solid #eee;" onerror="this.src='${fallbackImg}'">
+                <div style="font-family:Poppins,sans-serif; flex:1;">
+                  <h3 style="margin:0 0 5px 0; font-size:16px; color:#333;">${p.name}</h3>
+                  <div style="margin:0 0 5px 0;">${priceText} <span style="font-size:12px; color:#888;">(${p.unit})</span></div>
+                  <p style="margin:0; font-size:11px; color:#666; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${p.desc || ''}</p>
+                </div>
+              </div>
+            `;
+         });
+         itemsHtml += '</div>';
+         return itemsHtml;
+      };
+
+      if (favorites.length > 0) {
+         html += '<h2 style="color:#f1c40f; text-align:center; font-family:Nunito,sans-serif;">⭐ En Çok Sevilenler</h2>';
+         html += renderItems(favorites);
+      }
+      
+      if (others.length > 0) {
+         html += '<h2 style="color:#ff7e5f; text-align:center; font-family:Nunito,sans-serif;">🍴 Diğer Lezzetlerimiz</h2>';
+         html += renderItems(others);
+      }
       
       printContainer.innerHTML = html;
       
