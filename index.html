@@ -232,6 +232,20 @@
     .floating-wa-btn:hover { transform: scale(1.1); }
     .floating-wa-btn svg { width: 35px; height: 35px; fill: currentColor; }
 
+    /* Ziyaretçi Sayacı */
+    .visitor-counter {
+      margin-top: 15px; 
+      font-size: 1rem; 
+      color: #ff7e5f; 
+      font-weight: 800; 
+      background: rgba(255, 126, 95, 0.1); 
+      display: inline-block; 
+      padding: 10px 20px; 
+      border-radius: 30px;
+      border: 1px solid rgba(255, 126, 95, 0.3);
+    }
+    body.dark-mode .visitor-counter { background: rgba(255, 126, 95, 0.05); }
+
     /* Modal / Admin Formu */
     #admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; padding: 20px; }
     .admin-content { background: white; padding: 35px; border-radius: 25px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; color: #333; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
@@ -380,6 +394,10 @@
 
   <section id="contact" style="text-align:center; padding: 2rem 0 4rem;">
     <p style="font-weight:bold; color: #888; font-size: 1.1rem;">📍 Mersin / Mezitli</p>
+    <!-- Ziyaretçi Sayacı -->
+    <div class="visitor-counter">
+      👁️ Toplam Ziyaretçi: <span id="visitor-count">...</span>
+    </div>
   </section>
 
   <!-- Sabit WhatsApp İletişim Butonu (Hazır Mesajlı) -->
@@ -545,6 +563,9 @@
       document.getElementById('campaign-text').textContent = campaignText;
       renderProducts();
       
+      // Ziyaretçi Sayacı Başlat
+      trackVisitor();
+
       if (isAdmin) {
         document.getElementById('floating-add-btn').style.display = 'block';
         document.getElementById('floating-logout-btn').style.display = 'block';
@@ -555,6 +576,30 @@
         const loader = document.getElementById('page-loader');
         if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.style.display = 'none', 500); }
       }, 1000);
+    }
+
+    // Gerçek Zamanlı Ziyaretçi Sayacı
+    function trackVisitor() {
+      try {
+        const countRef = db.ref('settings/visitorCount');
+        
+        // Ziyaretçi sayısını ekranda anlık olarak göster
+        countRef.on('value', (snapshot) => {
+          const count = snapshot.val() || 0;
+          const countEl = document.getElementById('visitor-count');
+          if (countEl) countEl.textContent = count;
+        });
+
+        // Kullanıcı bu oturumda siteye ilk defa girdiyse sayacı 1 artır
+        if (!sessionStorage.getItem('hasVisited')) {
+          countRef.transaction((currentCount) => {
+            return (currentCount || 0) + 1;
+          });
+          sessionStorage.setItem('hasVisited', 'true'); // Tekrar yenilediğinde artmasını engelle
+        }
+      } catch (e) {
+        console.error("Ziyaretçi sayacı yüklenemedi:", e);
+      }
     }
 
     async function fetchFromGithubAndSave() {
@@ -839,18 +884,6 @@
       document.getElementById('admin-modal').style.display = 'flex';
     }
 
-    async function deleteImageFromFirebase(imageUrl) {
-      if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.includes('firebasestorage')) return; 
-      try {
-        if(typeof firebase.storage === "function") {
-           const fileRef = firebase.storage().refFromURL(imageUrl);
-           await fileRef.delete();
-        }
-      } catch (e) { 
-        console.error("Silme hatası:", e); 
-      }
-    }
-
     async function saveProduct() {
       const name = document.getElementById('admin-name').value;
       const price = document.getElementById('admin-old-price').value;
@@ -866,16 +899,6 @@
       
       document.getElementById('loader').style.display = 'flex';
       document.getElementById('loader-msg').textContent = "Sistem kaydediliyor...";
-
-      if (editIndex > -1) {
-        let oldImage = productList[editIndex].image;
-        let oldImages = oldImage ? (Array.isArray(oldImage) ? oldImage : [oldImage]) : [];
-        for (let oldImg of oldImages) {
-          if (oldImg && !currentEditImages.includes(oldImg)) {
-            await deleteImageFromFirebase(oldImg);
-          }
-        }
-      }
 
       if(currentEditImages.length === 0) {
         pData.image = [fallbackImg];
@@ -943,9 +966,6 @@
       if(confirm("Bu lezzeti tamamen silmek istediğinize emin misiniz?")) { 
         document.getElementById('loader').style.display = 'flex';
         document.getElementById('loader-msg').textContent = "Sistem temizleniyor...";
-        let p = productList[idx];
-        let imgs = p.image ? (Array.isArray(p.image) ? p.image : [p.image]) : [];
-        for (let img of imgs) { if(img) await deleteImageFromFirebase(img); } 
         productList.splice(idx, 1); 
         await saveToFirebase(); 
       } 
