@@ -548,7 +548,7 @@
       if (isAdmin) {
         document.getElementById('floating-add-btn').style.display = 'block';
         document.getElementById('floating-logout-btn').style.display = 'block';
-        document.getElementById('floating-print-btn').style.display = 'block'; // PDF/Yazdır Butonu
+        document.getElementById('floating-print-btn').style.display = 'block'; 
       }
       
       setTimeout(() => { 
@@ -601,7 +601,8 @@
       let carouselHtml = `<div class="carousel" id="${carouselId}">`;
       
       images.forEach((img, i) => { 
-        carouselHtml += `<img src="${img}" class="${i===0?'active':''}" onerror="this.onerror=null;this.src='${fallbackImg}'">`; 
+        let protection = !isAdmin ? 'oncontextmenu="return false;" ondragstart="return false;" style="-webkit-touch-callout:none; user-select:none;"' : '';
+        carouselHtml += `<img src="${img}" class="${i===0?'active':''}" onerror="this.onerror=null;this.src='${fallbackImg}'" ${protection}>`; 
       });
       
       if(images.length > 1) {
